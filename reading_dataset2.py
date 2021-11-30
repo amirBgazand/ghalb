@@ -34,11 +34,14 @@ class data ():
 
 def label2diagnosis(label):
     label_of_disease=['164861001', '426434006'  , '425419005' , '425623009','413844008' , '413444003' , '53741008', '266257000',
-    '164931005','429622005','59931005','164934002','164917005','428750005','370365005','164867002','164930006','164921003','164951009','164947007','111975006','284470004','164873001','426783006']
+    '164931005','429622005','59931005','164934002','164917005','428750005','370365005','164867002','164930006','164921003'
+    ,'164951009','164947007','111975006','284470004','164873001','426783006']
     
     list_of_disease=['myocardial_ischemia', 'anterior_ischemia', 'inferior_ischaemia' ,'lateral_ischaemia' 
     , 'chronic_myocardial_ischemia' ,'acute_myocardial_ischemia' , 'coronary_heart_disease' ,'transient_ischemic_attack'
-    ,'st_elevation','st_depresion','twave_inversion','twave_abnormal','qwave_abnormal','nonspecific_st_t_abnormality' , 'left_ventricular_strain','old_myocardial_infarction','st_interval_abnormal','r_wave_abnormal','abnormal_QRS','prolonged_pr_interval','prolonged_qt_interval','premature_atrial_contraction','left_ventricular_hypertrophy','sinus_rhythm']
+    ,'st_elevation','st_depresion','twave_inversion','twave_abnormal','qwave_abnormal','nonspecific_st_t_abnormality' 
+    , 'left_ventricular_strain','old_myocardial_infarction','st_interval_abnormal','r_wave_abnormal','abnormal_QRS'
+    ,'prolonged_pr_interval','prolonged_qt_interval','premature_atrial_contraction','left_ventricular_hypertrophy','sinus_rhythm']
 
     if label in label_of_disease:
         diagnosis=list_of_disease[label_of_disease.index(label)]
@@ -155,7 +158,11 @@ def find_coronaries(folder_number):
                     new= [label2diagnosis(x) for x in ecg.dx]
                     coroneries.append(new)
                     break
-    return coronery_ids   
+    return coronery_ids   , coroneries
     
 # print(find_normals(5))
-print(find_coronaries(5))
+a=find_coronaries(5)
+with open ('file3.txt' , 'w') as file:
+    for item in a :
+        file.write(str(item)+'\n')
+
