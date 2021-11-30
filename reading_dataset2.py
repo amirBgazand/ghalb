@@ -141,19 +141,21 @@ def find_coronaries(folder_number):
     location=get_location(folder_number)[0]
     number_of_files=int (len([name for name in os.listdir(location) if os.path.isfile(os.path.join(location, name))])/2)
     coroneries=[]
+    coronery_ids=[]
     label_of_coronaries=['164861001', '426434006'  , '425419005' , '425623009','413844008' , '413444003' , '53741008', '266257000',]
 
     for i in range (1,number_of_files+1):
         ecg=read_ecg(i , folder_number)
         assert type(ecg.dx)==list
+        
         if ecg.dx != None:
             for dx in ecg.dx :
                 if dx in label_of_coronaries:
+                    coronery_ids.append(ecg.index)
                     new= [label2diagnosis(x) for x in ecg.dx]
                     coroneries.append(new)
                     break
-    return(coroneries)    
+    return coronery_ids   
     
 # print(find_normals(5))
 print(find_coronaries(5))
-
