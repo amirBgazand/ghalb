@@ -43,14 +43,18 @@ def label2diagnosis(label):
     , 'left_ventricular_strain','old_myocardial_infarction','st_interval_abnormal','r_wave_abnormal','abnormal_QRS'
     ,'prolonged_pr_interval','prolonged_qt_interval','premature_atrial_contraction','left_ventricular_hypertrophy','sinus_rhythm']
 
-    if label in label_of_disease:
+    if label in list_of_disease:
+        diagnosis=label_of_disease[list_of_disease.index(label)]
+    elif label in label_of_disease:
         diagnosis=list_of_disease[label_of_disease.index(label)]
     else:
         diagnosis=label
        
     return (diagnosis)    
     
-
+def intersection(lst1, lst2):
+    lst3 = [value for value in lst1 if value in lst2]
+    return lst3
 
 def get_location(folder_number):
     folders=['1-Training_WFDB','2-Training_2','3-PhysioNetChallenge2020_Training_StPetersburg'
@@ -96,22 +100,23 @@ def plot_ecg_form(ecg , mat,time, form):
     new=[label2diagnosis(x) for x in ecg.dx]
     x=np.arange(ecg.samples, )/ecg.sample_rate
     y=mat/1000
-    maxy=y.max()
-    miny=y.min()
+    y_of_time=y[:,int(time[0]*ecg.sample_rate):int(time[1]*ecg.sample_rate)]
+    maxy=y_of_time.max()
+    miny=y_of_time.min()
     fig, ax = plt.subplots(6,2)
     if form == 'normal':
         leads=['I','II','III','aVR','aVL','aVF','V1','V2','V3','V4','V5','V6']
     else:         
         y_new=np.empty((12,int(ecg.samples)))
-        y_new[0,:]=y[4,:]
-        y_new[1,:]=y[0,:]
-        y_new[2,:]=-y[3,:]
-        y_new[3,:]=y[1,:]
-        y_new[4,:]=y[5,:]
-        y_new[5,:]=y[2,:]
-        y_new[6:12,:]=y[6:12,:]
+        y_new[0,:]=mat[4,:]
+        y_new[1,:]=mat[0,:]
+        y_new[2,:]=-mat[3,:]
+        y_new[3,:]=mat[1,:]
+        y_new[4,:]=mat[5,:]
+        y_new[5,:]=mat[2,:]
+        y_new[6:12,:]=mat[6:12,:]
         leads =['aVL','I','-aVR','II','aVF','III','V1','V2','V3','V4','V5','V6']
-        y=y_new
+        mat=y_new
 
     for i in range (6):
         for j in range (2):
@@ -123,12 +128,12 @@ def plot_ecg_form(ecg , mat,time, form):
             small_vertical=np.arange(0,tool ,0.04)  
             big_vertical=np.arange(0,tool,0.2)
 
-            [ax[i,j].axvline(x=k, linestyle='--',linewidth=0.1 ) for k in small_vertical]
+            [ax[i,j].axvline(x=k, linestyle='--',linewidth=0.2 ) for k in small_vertical]
             [ax[i,j].axvline(x=k, linestyle='--',linewidth=0.5 ) for k in big_vertical]
 
             small_horizontal=np.arange(-3,+3 ,0.1) 
             big_horizontal=np.arange(-3,+3,0.5)
-            [ax[i,j].axhline(y=k, linestyle='--',linewidth=0.1 ) for k in small_horizontal]
+            [ax[i,j].axhline(y=k, linestyle='--',linewidth=0.2 ) for k in small_horizontal]
             [ax[i,j].axhline(y=k, linestyle='--',linewidth=0.5 ) for k in big_horizontal]
             ax[i,j].axis([time[0], time[1],miny,maxy])
     
@@ -146,7 +151,8 @@ def plot_ecg (index,time=None,channels=None,folder_number=5 , form='better'):
     if time != None:
         assert type(time)==tuple  
     else:
-        time=(0,ecg.samples/ecg.sample_rate)  
+        if ecg.samples != None :
+            time=(0,ecg.samples/ecg.sample_rate)  
 
     plot_ecg_form(ecg,mat,time ,form)
         
@@ -193,7 +199,7 @@ def subplot (channels , ecg , mat ):
             
         fig.suptitle(f'age:{ecg.age} , dx:{str(new)} ' , fontsize=10 )
 
-plot_ecg (4,(0,6))
+# plot_ecg (13,(0,6) )
 
 
 
@@ -222,18 +228,67 @@ def find_coronaries(folder_number):
     coroneries=[]
     coronery_ids=[]
     label_of_coronaries=['164861001', '426434006'  , '425419005' , '425623009','413844008' , '413444003' , '53741008', '266257000',]
-
     for i in range (1,number_of_files+1):
-        ecg=read_ecg(i , folder_number)
-        assert type(ecg.dx)==list
-        
-        if ecg.dx != None:
-            for dx in ecg.dx :
-                if dx in label_of_coronaries:
-                    coronery_ids.append(ecg.index)
-                    new= [label2diagnosis(x) for x in ecg.dx]
-                    coroneries.append(new)
-                    break
+        try :
+            ecg=read_ecg(i , folder_number)
+            assert type(ecg.dx)==list
+            
+            if ecg.dx != None:
+                for dx in ecg.dx :
+                    if dx in label_of_coronaries:
+                        coronery_ids.append(ecg.index)
+                        new= [label2diagnosis(x) for x in ecg.dx]
+                        new.insert(0,ecg.index)
+                        coroneries.append(new)
+                        break
+        except:
+            pass            
     return coronery_ids   , coroneries
     
 
+def find_plus_minus(yekish_bashe , minus,  hamash_bashe=None ,folder_number=5):
+    location=get_location(folder_number)[0]
+    number_of_files=int (len([name for name in os.listdir(location) if os.path.isfile(os.path.join(location, name))])/2)
+    count=0
+    list_of_ids=[]
+    list_of_dxs=[]
+    for i in range (1,number_of_files+1):
+        ecg=read_ecg(i , folder_number)
+
+        if len(intersection(yekish_bashe,ecg.dx))!=0 and len(intersection(minus,ecg.dx))==0:
+            if ecg.dx!=None:
+                count+=1
+                list_of_ids.append(ecg.index)
+                
+                new= [label2diagnosis(x) for x in ecg.dx]
+                new.insert(0,ecg.index)
+                list_of_dxs.append(new)
+    return list_of_ids,list_of_dxs        , count    
+
+
+
+def creating_file(list_that_you_want,folder_number=5, ):
+    from varname import nameof
+
+    a=list_that_you_want
+    
+    with open (f'file{folder_number} {nameof(list_that_you_want)}.txt' , 'w') as f:
+        for item in a:
+            f.write(str(item))
+
+
+# f_ischemia(5)
+# plot_ecg(146 , (0,6),folder_number=4)
+plot_ecg(4 , (0,6),folder_number=5)
+
+# label_of_coronaries=['164861001', '426434006'  , '425419005' , '425623009','413844008' , '413444003' , '53741008', '266257000',]
+
+# creating_file(find_plus_minus(label_of_coronaries,minus=['59931005','164934002']))
+
+
+
+
+# def read_dat_file():
+#     location='\\data\\staff-iii-database-1.0.0\\data'
+
+#     sed = np.loadtxt(f'{location} ', unpack = True)
