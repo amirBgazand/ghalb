@@ -3,6 +3,7 @@ import os
 import matplotlib.pyplot as plt
 import scipy.io
 import numpy as np
+from denoising_function import denoising_data
 
 label_of_disease=['164861001', '426434006'  , '425419005' , '425623009','413844008' , '413444003' , '53741008', '266257000',
     '164931005','429622005','59931005','428750005','370365005','164867002','426783006']
@@ -71,10 +72,15 @@ def get_ecg(index,folder_number):
     return ecg_mat_file, ecg_annotation_file
 
 
-def read_ecg(index,folder_number=5):
+def read_ecg(index,folder_number=5 , denoise=False):
     ecg_mat_file,ecg_annotation_file=get_ecg(index,folder_number)
     mat = scipy.io.loadmat(ecg_mat_file)
+    np.seterr(invalid='ignore')
+
+
     mat=mat['val']
+    if denoise == True:
+        mat = denoising_data(mat)
     ecg=data()
     ecg.index=index
     ecg.mat=mat
@@ -149,57 +155,57 @@ def plot_ecg (index,time=None,channels=None,folder_number=5 , form='better'):
     mat=ecg.mat
 
     
-    # subplot(channels,ecg,mat)
     if time != None:
         assert type(time)==tuple  
     else:
         if ecg.samples != None :
             time=(0,ecg.samples/ecg.sample_rate)  
-
-    plot_ecg_form(ecg,mat,time ,form)
+    if channels != None:
+        subplot(channels,ecg,mat)
+    else:
+        plot_ecg_form(ecg,mat,time ,form)
         
     plt.show()
 
 
-# def subplot (channels , ecg , mat ):
-#     leads=['I','II','III','aVR','aVL','aVF','V1','V2','V3','V4','V5','V6']
-#     x=np.arange(ecg.samples, )/ecg.sample_rate
-#     dx=ecg.dx
-#     new=[label2diagnosis(x) for x in ecg.dx]
+def subplot (channels , ecg , mat ):
+    leads=['I','II','III','aVR','aVL','aVF','V1','V2','V3','V4','V5','V6']
+    x=np.arange(ecg.samples, )/ecg.sample_rate
+    new=[label2diagnosis(x) for x in ecg.dx]
     
-#     if type(channels)!=list and channels!=None :
-#         plt.plot(x,mat [channels ,:]/1000)
-#         plt.ylabel(leads[channels])
+    if type(channels)!=list and channels!=None :
+        plt.plot(x,mat [channels ,:]/1000)
+        plt.ylabel(leads[channels])
        
-#     else:    
-#         if channels==None:
-#             channels=[i for i in range(12)]
+    else:    
+        if channels==None:
+            channels=[i for i in range(12)]
     
-#         x=np.arange(ecg.samples, )/ecg.sample_rate
-#         num=len(channels)
-#         fig, ax = plt.subplots(num)
+        x=np.arange(ecg.samples, )/ecg.sample_rate
+        num=len(channels)
+        fig, ax = plt.subplots(num)
 
-#         for i in range (num):
+        for i in range (num):
             
-#             y=mat[channels[i],:]/1000
-#             maxy=y.max()
-#             miny=y.min()
-#             tool=ecg.duration
-#             small_vertical=np.arange(0,tool ,0.04)  
-#             big_vertical=np.arange(0,tool,0.2)
+            y=mat[channels[i],:]/1000
+            maxy=y.max()
+            miny=y.min()
+            tool=ecg.duration
+            small_vertical=np.arange(0,tool ,0.04)  
+            big_vertical=np.arange(0,tool,0.2)
 
-#             [ax[i].axvline(x=j, linestyle='--',linewidth=0.1 ) for j in small_vertical]
-#             [ax[i].axvline(x=j, linestyle='--',linewidth=0.5 ) for j in big_vertical]
+            [ax[i].axvline(x=j, linestyle='--',linewidth=0.1 ) for j in small_vertical]
+            [ax[i].axvline(x=j, linestyle='--',linewidth=0.5 ) for j in big_vertical]
 
-#             small_horizontal=np.arange(miny,maxy ,0.1) 
-#             big_horizontal=np.arange(miny,maxy,0.5)
-#             [ax[i].axhline(y=j, linestyle='--',linewidth=0.1 ) for j in small_horizontal]
-#             [ax[i].axhline(y=j, linestyle='--',linewidth=0.5 ) for j in big_horizontal]
-#             ax[i].plot(x,y)
-#             ax[i].set_ylabel (leads[channels[i]])
-#             plt.subplots_adjust(left=0.07, bottom=0.02, right=0.98, top=0.98, wspace=0, hspace=0)
+            small_horizontal=np.arange(miny,maxy ,0.1) 
+            big_horizontal=np.arange(miny,maxy,0.5)
+            [ax[i].axhline(y=j, linestyle='--',linewidth=0.1 ) for j in small_horizontal]
+            [ax[i].axhline(y=j, linestyle='--',linewidth=0.5 ) for j in big_horizontal]
+            ax[i].plot(x,y)
+            ax[i].set_ylabel (leads[channels[i]])
+            plt.subplots_adjust(left=0.07, bottom=0.02, right=0.98, top=0.98, wspace=0, hspace=0)
             
-#         fig.suptitle(f'age:{ecg.age} , dx:{str(new)} ' , fontsize=10 )
+        fig.suptitle(f'age:{ecg.age} , dx:{str(new)} ' , fontsize=10 )
 
 # plot_ecg (13,(0,6) )
 
@@ -212,7 +218,7 @@ def plot_ecg (index,time=None,channels=None,folder_number=5 , form='better'):
 
 
 
-def find_normals(folder_number):
+def find_normals(folder_number=5):
     location=get_location(folder_number)[0]
     number_of_files=int (len([name for name in os.listdir(location) if os.path.isfile(os.path.join(location, name))])/2)
     count=0
@@ -221,7 +227,8 @@ def find_normals(folder_number):
         ecg=read_ecg(i , folder_number)
         if ecg.dx==['426783006']:
             normal_numbers.append(i)
-    return normal_numbers        
+            count+=1
+    return normal_numbers    , count    
 
 
 def find_coronaries(folder_number):
@@ -248,14 +255,17 @@ def find_coronaries(folder_number):
     return coronery_ids   , coroneries
     
 
-def find_plus_minus(yekish_bashe , minus,  hamash_bashe=None ,folder_number=5):
+def find_plus_minus(yekish_bashe , minus=[],  hamash_bashe=None ,folder_number=5):
     location=get_location(folder_number)[0]
     number_of_files=int (len([name for name in os.listdir(location) if os.path.isfile(os.path.join(location, name))])/2)
     count=0
     list_of_ids=[]
+
+
     list_of_dxs=[]
     for i in range (1,number_of_files+1):
         ecg=read_ecg(i , folder_number)
+
 
         if len(intersection(yekish_bashe,ecg.dx))!=0 and len(intersection(minus,ecg.dx))==0:
             if ecg.dx!=None:
@@ -269,23 +279,19 @@ def find_plus_minus(yekish_bashe , minus,  hamash_bashe=None ,folder_number=5):
 
 
 
-def creating_file(list_that_you_want,folder_number=5, ):
-    from varname import nameof
+def create_file(list_that_you_want,name_of_file,folder_number=5, ):
 
-    a=list_that_you_want
-    
-    with open (f'file{folder_number} {nameof(list_that_you_want)}.txt' , 'w') as f:
-        for item in a:
+    loc='seperated ecgs\\'
+    leng=len(list_that_you_want[0])
+    with open (f'{loc}file{folder_number} {name_of_file}.txt' , 'w') as f:
+        f.write(str(leng))
+        for item in list_that_you_want:
             f.write(str(item))
 
 
 # f_ischemia(5)
 # plot_ecg(146 , (0,6),folder_number=4)
-plot_ecg(10  ,folder_number=5)
-
-# label_of_coronaries=['164861001', '426434006'  , '425419005' , '425623009','413844008' , '413444003' , '53741008', '266257000',]
-
-# creating_file(find_plus_minus(label_of_coronaries,minus=['59931005','164934002']))
+# plot_ecg(145  ,folder_number=5)
 
 
 
@@ -294,3 +300,4 @@ plot_ecg(10  ,folder_number=5)
 #     location='\\data\\staff-iii-database-1.0.0\\data'
 
 #     sed = np.loadtxt(f'{location} ', unpack = True)
+
